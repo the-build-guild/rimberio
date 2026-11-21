@@ -1,0 +1,6 @@
+{
+  "repository": "thebuildguild/rimberio",
+  "description": "Rimberio: self-hosted WhatsApp inbox and API with webhooks and n8n integration.",
+  "categories": ["api-management", "integration-and-delivery"],
+  "readme": "README.md"
+}
