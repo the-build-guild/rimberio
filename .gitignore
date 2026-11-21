@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+*.log
+*.tgz
+*.tar
+*.sql
+*.zip
+*.key
+*.pem
+src/
+public/
+patches/
+Dockerfile
+DEPLOYMENT_HANDOFF.md

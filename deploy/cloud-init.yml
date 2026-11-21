@@ -1,0 +1,18 @@
+#cloud-config
+# Change the domain and point its DNS A/AAAA records at the server.
+# Paste into Hetzner Cloud config or DigitalOcean Droplet User data.
+package_update: true
+packages:
+  - curl
+  - ca-certificates
+  - openssl
+write_files:
+  - path: /root/install-rimberio.sh
+    permissions: '0700'
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      curl -fsSL --retry 3 https://raw.githubusercontent.com/buildtheguild/rimberio/main/install.sh -o /root/rimberio-installer.sh
+      RIMBERIO_DOMAIN=chat.example.com bash /root/rimberio-installer.sh
+runcmd:
+  - [bash, /root/install-rimberio.sh]

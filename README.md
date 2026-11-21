@@ -1,92 +1,45 @@
-# @thebuildguild/n8n-nodes-rimberio
+# Rimberio
 
-An n8n community node for Rimberio: send, receive, and automate WhatsApp workflows through your own self-hosted instance.
+Self-hosted WhatsApp API, operator inbox and n8n integration. This public repository contains deployment files, documentation, examples and the MIT-licensed n8n community plugin. Application source remains private; deployment uses prebuilt Docker images.
 
-## Installation
+## Deploy
 
-From the n8n editor on self-hosted n8n: Settings -> Community nodes -> Install, then enter:
+Use a Linux VPS with at least 2 GB RAM (4 GB recommended), persistent storage, Docker and Compose. Images support Linux AMD64 and ARM64. Docker selects the matching architecture automatically.
 
-```bash
-@thebuildguild/n8n-nodes-rimberio
+```sh
+curl -fsSL https://raw.githubusercontent.com/buildtheguild/rimberio/main/install.sh -o install-rimberio.sh
+sudo env RIMBERIO_DOMAIN=chat.example.com bash install-rimberio.sh
 ```
 
-Manual install:
+Point your domain to the server first and allow ports 80/443. The installer generates secrets, starts Postgres and configures automatic HTTPS with Caddy. Open the site and create the owner account immediately. Without a domain it binds to localhost for setup only.
 
-```bash
-npm install @thebuildguild/n8n-nodes-rimberio
-```
+[Deployment guide](deploy/README.md): Hostinger, Hetzner, DigitalOcean and other VPS providers, including automatic cloud-init installation. Provider Marketplace listings require separate approval; these templates do not imply such approval.
 
-## Publishing
+For manual installation, copy `docker-compose.yml` and `.env.example`, generate the required secrets, then run `docker compose up -d --wait`. Keep the default localhost binding until an HTTPS reverse proxy is configured. Data and linked-session credentials persist in Docker volumes.
 
-Before publishing, confirm the public Rimberio repository URL in `package.json` and `credentials/WapiBridgeApi.credentials.ts`, then run from the repository root:
+## Features and documentation
 
-```bash
-npm run publish:n8n:dry-run
-npm run publish:n8n
-```
+- Operator console: conversations, paginated history, media, calls, contacts, groups, status and channels.
+- REST API, webhooks, SSE event feed, queued sends and auto-reply rules.
+- Scoped API keys, audit logs, session backup and operational diagnostics.
+- [API guide](endpoints.md); enable Swagger in Settings to browse your instance's exact API at `/api-docs`. Download its OpenAPI document at `/api-docs-json`.
+- [n8n examples](examples/n8n.md) and [reverse proxies](examples/reverse-proxy.md).
+- [Release notes](CHANGELOG.md).
 
-The dry run lints, builds, validates n8n package metadata, and previews the npm tarball. The publish command runs the same checks, verifies `npm whoami`, then publishes with `npm publish --access public`.
+## n8n
 
-To grant the npm org team after publishing:
+In self-hosted n8n, open Settings ? Community nodes and install `@thebuildguild/n8n-nodes-rimberio`. Use a scoped API key; the trigger requires admin scope to register its webhook. [Plugin source and documentation](plugins/n8n-nodes-rimberio/README.md).
 
-```bash
-npm run publish:n8n -- --grant-team thebuildguild:developers
-```
+The 0.1.11 plugin supports chat pagination, cursor-based history and browser-compatible video download on Rimberio 0.3.0. It does not fetch every conversation's history during initial loading.
 
-For n8n Creator Portal verification, publish from GitHub Actions using `.github/workflows/publish-n8n-node.yml`. n8n expects verified community nodes to be published to npm with provenance from a supported CI provider.
+## Upgrades and backups
 
-## Credentials
+Compose pins the application version. Back up Postgres and session data before changing that tag, then run `docker compose pull && docker compose up -d --wait`. Do not delete named volumes during an upgrade. See the [deployment guide](deploy/README.md#backup-upgrade-and-recovery).
 
-Create a Rimberio API credential with:
+## Account safety and licensing
 
-- Base URL: where your instance is reachable, for example `https://rimberio.example.com`
-- Token: your `BRIDGE_TOKEN`, or preferably a scoped API key from Settings -> API keys
+Rimberio uses an unofficial WhatsApp Web client. It cannot guarantee account safety or uninterrupted compatibility with WhatsApp changes. Use consent-based messaging and conservative limits. The application requires an active Rimberio license; the n8n plugin is MIT-licensed. Do not link a number you cannot afford to lose.
 
-Action-only workflows usually work with a `send` scoped key. Rimberio Trigger workflows need an admin-capable key because activation registers a webhook subscription.
+## Support
 
-Use Test to confirm connectivity. It calls `/v1/health`, which still requires auth but skips the licence check.
-
-## Nodes
-
-### Rimberio
-
-Automation-focused actions:
-
-| Resource | Operations |
-|---|---|
-| Message | Send Text, Send Media, Send Location, Send Poll, Send Contacts, Send Call Link, Send Sticker, Reply, React, Forward, Edit, Delete, Star, Unstar, Pin, Unpin, Download Media, Search |
-| Chat | List, Get Messages, Get Pinned Messages, Get Profile Picture, Get Presence, Mark as Read, Mark as Unread, Typing, Recording, Clear State, Archive, Unarchive, Pin, Unpin, Mute, Unmute, Clear |
-| Contact | List, Check Number, Get, Get Profile Picture, Block, Unblock |
-| Group | Create, Get, Add Participants, Remove Participants, Promote Admins, Demote Admins, Get Invite Code, Revoke Invite Code, Set Subject, Set Description, Leave |
-| Label | List, Get Chat Labels, Set Chat Labels |
-| Queue | Get Usage, Get Queue, Cancel Queued Send, Retry Failed Send |
-| Session | List, Get, Set Available, Set Unavailable |
-
-Admin surfaces such as API key management, audit log, config import/export, browser tuning, proxy tuning, and webhook management are intentionally left to the Rimberio console or HTTP Request node.
-
-### Rimberio Trigger
-
-Fires on activity from your instance. It registers one webhook subscription when the workflow is activated and removes that subscription on deactivation.
-
-| Event | Fires when |
-|---|---|
-| Message Received | An inbound message arrives |
-| Message Sent | A rate-limit-queued outbound send completes |
-| Session Status | A session connects, disconnects, or fails to authenticate |
-| Call Received | An incoming call arrives |
-
-Multiple trigger nodes can subscribe to the same WhatsApp session. Rimberio stores webhook subscriptions independently by URL, so one workflow no longer replaces another.
-
-## Queued Sends
-
-Rimberio rate-limits outbound messages. When a send is deferred, the API returns `202` with `queued: true` and a `queueId`; the node treats that as success and exposes `queued: true`.
-
-Do not retry a queued send. The final result arrives later as a Message Sent trigger event carrying the same `queueId`, or through Queue -> Get Queue.
-
-## Compatibility
-
-Requires n8n 1.x and Node 20.15+. Tested against Rimberio 0.1.x.
-
-## License
-
-MIT
+Open an issue with your version, expected behavior and sanitized diagnostics. Never post tokens, `.env`, session backups or customer messages.

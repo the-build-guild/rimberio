@@ -1,0 +1,58 @@
+{
+  "name": "@thebuildguild/n8n-nodes-rimberio",
+  "version": "0.1.11",
+  "description": "n8n node for Rimberio: send and receive WhatsApp messages through a self-hosted Rimberio instance.",
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "whatsapp",
+    "rimberio"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/buildtheguild/rimberio",
+  "author": {
+    "name": "Hobbytronics",
+    "email": "support@hobbytronics.pk"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buildtheguild/rimberio.git",
+    "directory": "plugins/n8n-nodes-rimberio"
+  },
+  "engines": {
+    "node": ">=20.15"
+  },
+  "main": "index.js",
+  "scripts": {
+    "build": "npx rimraf dist && tsc && gulp build:icons",
+    "dev": "tsc --watch",
+    "lint": "eslint nodes credentials",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/WapiBridgeApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/Rimberio/Rimberio.node.js",
+      "dist/nodes/RimberioTrigger/RimberioTrigger.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-n8n-nodes-base": "^1.16.3",
+    "gulp": "^5.0.0",
+    "n8n-workflow": "*",
+    "prettier": "^3.3.0",
+    "rimraf": "^6.0.0",
+    "typescript": "^5.5.0"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}

@@ -1,0 +1,63 @@
+# Rimberio distribution compose file.
+#
+# There is deliberately no build directive here. This file pulls a prebuilt image; the
+# application source is not part of this repository and is not needed to run it.
+
+services:
+  rimberio:
+    container_name: rimberio
+    image: thebuildguild/wapi-bridge:0.3.0
+    init: true
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-3000}:3000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      APP_VERSION: 0.3.0
+      AUTH_REQUIRE_HTTPS: ${AUTH_REQUIRE_HTTPS:-true}
+      BRIDGE_TOKEN: ${BRIDGE_TOKEN:?Set BRIDGE_TOKEN in .env before running (cp .env.example .env)}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-rimberio}
+      DB_USER: ${DB_USER:-rimberio_app}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env before running (cp .env.example .env)}
+      RIMBERIO_DATA_PATH: /data
+      WWEBJS_DATA_PATH: /data/wwebjs_auth
+    volumes:
+      - rimberio_data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+
+  db:
+    container_name: rimberio-db
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-rimberio}
+      POSTGRES_USER: ${DB_USER:-rimberio_app}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env before running (cp .env.example .env)}
+    volumes:
+      - rimberio_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-rimberio_app} -d ${DB_NAME:-rimberio}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+
+volumes:
+  rimberio_data:
+  rimberio_pgdata:
