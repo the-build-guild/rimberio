@@ -7,7 +7,7 @@ Use Ubuntu 24.04 or Debian 12+, a persistent SSD, and at least 2 GB RAM for one 
 Point a domain's A/AAAA records to the server. Allow your SSH port and TCP 80/443 in the provider firewall. On the server:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/buildtheguild/rimberio/main/install.sh -o install-rimberio.sh
+curl -fsSL https://raw.githubusercontent.com/the-build-guild/rimberio/main/install.sh -o install-rimberio.sh
 sudo env RIMBERIO_DOMAIN=chat.example.com bash install-rimberio.sh
 ```
 

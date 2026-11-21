@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1
+
+- Move public guides, installer and plugin source to the-build-guild/rimberio.
+- Update API reference links and n8n package repository metadata (0.1.12).
+
 ## 0.3.0
 
 - Fast conversation summaries, cached recent messages and cursor-based older history.

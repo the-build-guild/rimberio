@@ -6,7 +6,7 @@
 services:
   rimberio:
     container_name: rimberio
-    image: thebuildguild/wapi-bridge:0.3.0
+    image: thebuildguild/wapi-bridge:0.3.1
     init: true
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-3000}:3000"
@@ -15,7 +15,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      APP_VERSION: 0.3.0
+      APP_VERSION: 0.3.1
       AUTH_REQUIRE_HTTPS: ${AUTH_REQUIRE_HTTPS:-true}
       BRIDGE_TOKEN: ${BRIDGE_TOKEN:?Set BRIDGE_TOKEN in .env before running (cp .env.example .env)}
       DB_HOST: db

@@ -1,6 +1,6 @@
 # API reference
 
-Rimberio 0.3.0: 141 operations. [OpenAPI JSON](openapi.json). Your instance provides the interactive reference at /api-docs when enabled.
+Rimberio 0.3.1: 141 operations. [OpenAPI JSON](openapi.json). Your instance provides the interactive reference at /api-docs when enabled.
 
 Authenticate using either `Authorization: Bearer TOKEN` or `X-Bridge-Token: TOKEN`. Prefer scoped API keys. Public health and account-auth routes have their own policies. WhatsApp routes may require license activation.
 

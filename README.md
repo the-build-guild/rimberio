@@ -7,7 +7,7 @@ Self-hosted WhatsApp API, operator inbox and n8n integration. This public reposi
 Use a Linux VPS with at least 2 GB RAM (4 GB recommended), persistent storage, Docker and Compose. Images support Linux AMD64 and ARM64. Docker selects the matching architecture automatically.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/buildtheguild/rimberio/main/install.sh -o install-rimberio.sh
+curl -fsSL https://raw.githubusercontent.com/the-build-guild/rimberio/main/install.sh -o install-rimberio.sh
 sudo env RIMBERIO_DOMAIN=chat.example.com bash install-rimberio.sh
 ```
 
@@ -30,7 +30,7 @@ For manual installation, copy `docker-compose.yml` and `.env.example`, generate 
 
 In self-hosted n8n, open Settings ? Community nodes and install `@thebuildguild/n8n-nodes-rimberio`. Use a scoped API key; the trigger requires admin scope to register its webhook. [Plugin source and documentation](plugins/n8n-nodes-rimberio/README.md).
 
-The 0.1.11 plugin supports chat pagination, cursor-based history and browser-compatible video download on Rimberio 0.3.0. It does not fetch every conversation's history during initial loading.
+The 0.1.12 plugin supports chat pagination, cursor-based history and browser-compatible video download on Rimberio 0.3.0. It does not fetch every conversation's history during initial loading.
 
 ## Upgrades and backups
 

@@ -11,7 +11,7 @@ export class WapiBridgeApi implements ICredentialType {
   // Keep the internal credential name stable for existing workflows; the editor shows
   // displayName, so users see Rimberio while old saved credentials can still resolve.
   // eslint-disable-next-line n8n-nodes-base/cred-class-field-documentation-url-miscased
-  documentationUrl = "https://github.com/buildtheguild/rimberio/blob/main/docs/api.md";
+  documentationUrl = "https://github.com/the-build-guild/rimberio/blob/main/docs/api.md";
 
   properties: INodeProperties[] = [
     {

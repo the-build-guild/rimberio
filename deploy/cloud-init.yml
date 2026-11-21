@@ -12,7 +12,7 @@ write_files:
     content: |
       #!/usr/bin/env bash
       set -euo pipefail
-      curl -fsSL --retry 3 https://raw.githubusercontent.com/buildtheguild/rimberio/main/install.sh -o /root/rimberio-installer.sh
+      curl -fsSL --retry 3 https://raw.githubusercontent.com/the-build-guild/rimberio/main/install.sh -o /root/rimberio-installer.sh
       RIMBERIO_DOMAIN=chat.example.com bash /root/rimberio-installer.sh
 runcmd:
   - [bash, /root/install-rimberio.sh]

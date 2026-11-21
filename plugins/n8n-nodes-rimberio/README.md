@@ -70,14 +70,14 @@ Requires n8n 1.x and Node 20.15+. Tested against Rimberio 0.1.x.
 
 ## Documentation and support
 
-- Rimberio documentation: https://github.com/buildtheguild/rimberio
-- API reference: https://github.com/buildtheguild/rimberio/blob/main/docs/api.md
-- Report an issue: https://github.com/buildtheguild/rimberio/issues
+- Rimberio documentation: https://github.com/the-build-guild/rimberio
+- API reference: https://github.com/the-build-guild/rimberio/blob/main/docs/api.md
+- Report an issue: https://github.com/the-build-guild/rimberio/issues
 
 ## License
 
 MIT
 
-## Version 0.1.11
+## Version 0.1.12
 
 Chat List supports limit/offset pagination. Get Messages returns the newest page first; pass the returned `nextCursor` in Before Cursor to load earlier messages. Download Media requests the full attachment and can optionally convert video to browser-compatible MP4. The default preserves the original format. Requires Rimberio 0.3.0 for cursor pagination and conversion.

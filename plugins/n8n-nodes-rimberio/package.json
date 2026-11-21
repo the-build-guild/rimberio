@@ -1,6 +1,6 @@
 {
   "name": "@thebuildguild/n8n-nodes-rimberio",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "n8n node for Rimberio: send and receive WhatsApp messages through a self-hosted Rimberio instance.",
   "keywords": [
     "n8n-community-node-package",
@@ -9,14 +9,14 @@
     "rimberio"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/buildtheguild/rimberio",
+  "homepage": "https://github.com/the-build-guild/rimberio",
   "author": {
     "name": "Hobbytronics",
     "email": "support@hobbytronics.pk"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/buildtheguild/rimberio.git",
+    "url": "git+https://github.com/the-build-guild/rimberio.git",
     "directory": "plugins/n8n-nodes-rimberio"
   },
   "engines": {

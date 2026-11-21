@@ -2,7 +2,7 @@
 # Install the published image only. No private application source is downloaded.
 set -euo pipefail
 umask 077
-RAW_BASE="${RIMBERIO_RAW_BASE:-https://raw.githubusercontent.com/buildtheguild/rimberio/main}"
+RAW_BASE="${RIMBERIO_RAW_BASE:-https://raw.githubusercontent.com/the-build-guild/rimberio/main}"
 INSTALL_DIR="${RIMBERIO_INSTALL_DIR:-/opt/rimberio}"
 PORT="${RIMBERIO_PORT:-3000}"
 DOMAIN="${RIMBERIO_DOMAIN:-}"
