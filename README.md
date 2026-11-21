@@ -4,7 +4,7 @@ Self-hosted WhatsApp API, operator inbox and n8n integration. This public reposi
 
 ## Deploy
 
-Use a Linux VPS with at least 2 GB RAM (4 GB recommended), persistent storage, Docker and Compose. Images support Linux AMD64 and ARM64. Docker selects the matching architecture automatically.
+Use a Linux VPS with at least 2 GB RAM (4 GB recommended), persistent storage, Docker and Compose. The image is `thebuildguild/rimberio:0.3.1` (also tagged `latest`), with Linux AMD64 and ARM64 support. Docker selects the matching architecture automatically.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/the-build-guild/rimberio/main/install.sh -o install-rimberio.sh

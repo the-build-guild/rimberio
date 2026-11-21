@@ -6,7 +6,7 @@
 services:
   rimberio:
     container_name: rimberio
-    image: thebuildguild/wapi-bridge:0.3.1
+    image: thebuildguild/rimberio:0.3.1
     init: true
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-3000}:3000"
