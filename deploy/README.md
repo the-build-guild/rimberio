@@ -2,6 +2,8 @@
 
 Use Ubuntu 24.04 or Debian 12+, a persistent SSD, and at least 2 GB RAM for one linked number (4 GB recommended). Additional numbers need roughly 1 GB each. Published Linux images cover AMD64 and ARM64; Windows/macOS users run them through Docker's Linux engine.
 
+For automated server creation on Hetzner or DigitalOcean, use the [Terraform templates](terraform/README.md). They provision the VPS and firewall, then run the same HTTPS installer.
+
 ## Any VPS: one command
 
 Point a domain's A/AAAA records to the server. Allow your SSH port and TCP 80/443 in the provider firewall. On the server:
@@ -31,7 +33,7 @@ Choose an Ubuntu VPS with Docker, SSH in, then run the command above. Alternativ
 
 Vultr, Linode/Akamai, OVH and other Linux VPS providers use the same installer. Providers supporting cloud-init can use the same template. Containers must have a persistent `/data` volume, a reachable Postgres and enough RAM for Chromium; sleeping or ephemeral-only free tiers are unsuitable.
 
-These are automated installation templates, not approved provider Marketplace apps. Official one-click catalog buttons require provider review and publication; no approved Marketplace listing is claimed.
+These are automated installation templates, not approved provider Marketplace apps. Hetzner currently does not accept new apps into its catalog ([official contribution policy](https://github.com/hetznercloud/apps#contributions)); use Terraform or cloud-init instead. DigitalOcean requires a vendor account, a cleaned and tested snapshot, and vendor-portal review ([official partner process](https://github.com/digitalocean/marketplace-partners#getting-started-creating-your-droplet-based-1-click-app)). No approved Marketplace listing is claimed.
 
 ## Backup, upgrade and recovery
 

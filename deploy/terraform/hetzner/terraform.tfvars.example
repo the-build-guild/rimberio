@@ -1,0 +1,5 @@
+domain            = "chat.example.com"
+ssh_key_ids       = ["REPLACE_WITH_EXISTING_KEY_ID"]
+ssh_allowed_cidrs = ["192.0.2.10/32"] # Replace with your administrator public IP.
+location          = "nbg1"
+server_type       = "cx23"

@@ -1,0 +1,13 @@
+#cloud-config
+package_update: true
+packages: [curl, ca-certificates, openssl]
+write_files:
+  - path: /root/install-rimberio.sh
+    permissions: '0700'
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      curl -fsSL --retry 3 https://raw.githubusercontent.com/the-build-guild/rimberio/main/install.sh -o /root/rimberio-installer.sh
+      RIMBERIO_DOMAIN='${domain}' bash /root/rimberio-installer.sh
+runcmd:
+  - [bash, /root/install-rimberio.sh]

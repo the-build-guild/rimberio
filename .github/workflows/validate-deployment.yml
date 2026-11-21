@@ -1,0 +1,27 @@
+name: Validate deployment templates
+on:
+  push:
+    paths: ["deploy/**", ".github/workflows/validate-deployment.yml"]
+  pull_request:
+    paths: ["deploy/**", ".github/workflows/validate-deployment.yml"]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        provider: [hetzner, digitalocean]
+    defaults:
+      run:
+        working-directory: deploy/terraform/${{ matrix.provider }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.17.2"
+      - run: terraform fmt -check
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate
+      # All test providers are mocked. No cloud tokens or paid resources are used.
+      - run: terraform test
