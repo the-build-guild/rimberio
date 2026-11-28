@@ -1,0 +1,243 @@
+#!/usr/bin/env bash
+# Applies an update the Rimberio console asked for.
+#
+# WHY A FILE AND NOT A SOCKET
+#
+# Updating means pulling an image and recreating the Rimberio container, which is the very
+# container that asks for it. Rimberio is reachable from the internet and has no Docker socket
+# and no host shell, on purpose: a container holding the Docker socket is root on this server,
+# whichever container it is. So the app only writes a request file into a folder it shares
+# with this script. This script runs on the host, outside any container, decides whether the
+# request is one it will carry out, and does it.
+#
+# The boundary holds: whoever can write the request file can ask for exactly one thing, "move
+# to this published release". The version is checked against a strict pattern before it
+# reaches a command line. It cannot name an image, a registry, a flag or a path: the image
+# repository comes from the pin this install already runs.
+#
+# Sequence: download the new image (nothing changes if that fails) -> stop Rimberio -> back up
+# the database and the data volume (WhatsApp logins included) -> switch the pin -> start ->
+# wait for a healthy container on the new version. If it never gets healthy: restore the
+# backup and the previous pin, start the previous version again, and say so.
+#
+# Triggered by rimberio-updater.path the moment a request appears, and again at boot if one
+# is still there after a reboot mid-update. Can also be run by hand: sudo rimberio-updater
+set -uo pipefail
+
+# THE SHARED FOLDER IS THE APP'S, NOT OURS
+#
+# updates/ belongs to the container's user, so whoever controls the container can put
+# anything there, including symlinks to host files and folders. This script runs as root, so
+# it never opens, chmods or writes a path inside updates/. It takes the request out by
+# renaming it into a folder only root can write (a rename moves a symlink, it does not follow
+# it), and it puts the status file in place the same way. Its lock and logs live in the
+# install folder (root's), not in updates/.
+BASE="${RIMBERIO_INSTALL_DIR:-/opt/rimberio}"
+DIR="$BASE/updates"
+REQUEST="$DIR/request.json"
+STATUS="$DIR/status.json"
+BACKUPS="${RIMBERIO_BACKUP_DIR:-$BASE/backups}"
+LOGS="$BASE/update-logs"
+KEEP_BACKUPS="${RIMBERIO_KEEP_BACKUPS:-3}"
+HEALTH_TIMEOUT="${RIMBERIO_HEALTH_TIMEOUT:-300}"
+SERVICE="rimberio"
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+LOG="$LOGS/update-$STAMP.log"
+
+# Releases are plain MAJOR.MINOR.PATCH. Anything else is refused, not passed on: this string
+# is the one thing crossing the boundary.
+VERSION_RE='^[0-9]{1,6}\.[0-9]{1,6}\.[0-9]{1,6}$'
+
+json_escape() {
+  # Backslash first, then the quote, or the escape would be escaped again. Parameter
+  # expansion rather than sed: this runs on a request a container wrote.
+  local v="${1:-}"
+  v="${v//\\/\\\\}"
+  v="${v//\"/\\\"}"
+  printf '%s' "$v" | tr -d '\000-\037'
+}
+
+write_status() {
+  local state="$1" detail="$2"
+  local tmp
+  # Written in root's own folder, then renamed over updates/status.json (see the top).
+  tmp="$(mktemp "$WORK/status.XXXXXX")" || return 1
+  cat > "$tmp" <<EOF
+{
+  "state": "$(json_escape "$state")",
+  "version": "$(json_escape "${target:-}")",
+  "fromVersion": "$(json_escape "${current:-}")",
+  "requestId": "$(json_escape "${request_id:-}")",
+  "detail": "$(json_escape "$detail")",
+  "updatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "logPath": "$(json_escape "$LOG")"
+}
+EOF
+  # World-readable: the app reads this to tell the operator what happened. It holds a version
+  # number and a sentence, nothing secret.
+  chmod 0644 "$tmp" && mv -fT "$tmp" "$STATUS"
+}
+
+log() { printf '%s %s\n' "$(date -u +%H:%M:%SZ)" "$*" >> "$LOG"; }
+
+# One field of a flat JSON object, without jq (not every server has it). Only the two
+# fields we read, and their values are validated before use. Reads the private copy of the
+# request, and only its first 4 KB.
+field() { head -c 4096 "$WORK/request.json" | sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p" | head -1; }
+
+dc() { docker compose --project-directory "$BASE" "$@"; }
+
+[[ -e "$REQUEST" || -L "$REQUEST" ]] || exit 0
+[[ -d "$BASE" && ! -L "$BASE" ]] || { echo "Install folder $BASE not found." >&2; exit 1; }
+mkdir -p "$BACKUPS" "$LOGS"
+chmod 0700 "$LOGS"
+
+# One update at a time, even if the path unit and a manual run race.
+exec 9> "$BASE/.update.lock"
+flock -n 9 || { echo "Another update is already running." >&2; exit 0; }
+
+WORK="$(mktemp -d "$BASE/.update-work.XXXXXX")" || exit 1
+trap 'rm -rf -- "$WORK"' EXIT
+
+# Consumed before anything slow happens, so a crashed run cannot loop: the request is gone
+# and the status says what became of it. Renamed, not read in place (see the top).
+mv -fT "$REQUEST" "$WORK/request.json" 2>/dev/null || exit 0
+target=""
+request_id=""
+current=""
+if [[ -f "$WORK/request.json" && ! -L "$WORK/request.json" ]]; then
+  target="$(field target)"
+  request_id="$(field requestId)"
+fi
+
+if [[ ! "$target" =~ $VERSION_RE ]]; then
+  target="$(json_escape "$target" | cut -c1-40)"
+  write_status "failed" "That is not a release this server will install."
+  exit 0
+fi
+if [[ ! "$request_id" =~ ^[A-Za-z0-9-]{1,64}$ ]]; then request_id=""; fi
+
+cd "$BASE" || { write_status "failed" "Install folder $BASE not found."; exit 0; }
+log "Update requested to $target (request ${request_id:-none})."
+
+# The repository and current version, from the pin this install runs. The tag is cut at the
+# LAST colon so a private mirror with a port (registry.example.com:5000/x/rimberio:1.2.3)
+# keeps its registry.
+pin="$(grep -E '^[[:space:]]*image:[[:space:]]*[^[:space:]]*rimberio:[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$' docker-compose.yml | head -1 | sed -E 's/^[[:space:]]*image:[[:space:]]*//; s/[[:space:]]*$//')"
+if [[ -z "$pin" ]]; then
+  write_status "failed" "docker-compose.yml has no pinned rimberio image (image: .../rimberio:X.Y.Z)."
+  exit 0
+fi
+repo="${pin%:*}"
+current="${pin##*:}"
+if [[ "$current" == "$target" ]]; then
+  write_status "succeeded" "Already running $target."
+  exit 0
+fi
+
+write_status "running" "Downloading $target. Rimberio keeps running meanwhile."
+if ! docker image inspect "$repo:$target" > /dev/null 2>&1 && ! docker pull "$repo:$target" >> "$LOG" 2>&1; then
+  log "Pull of $repo:$target failed."
+  write_status "failed" "Could not download $repo:$target. Nothing was changed."
+  exit 0
+fi
+
+container="$(dc ps -q "$SERVICE" 2>/dev/null | head -1)"
+volume=""
+if [[ -n "$container" ]]; then
+  volume="$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Name}}{{end}}{{end}}' "$container" 2>/dev/null)"
+fi
+if [[ -z "$volume" ]]; then
+  write_status "failed" "Could not find Rimberio's data volume (is the container running?). Nothing was changed."
+  exit 0
+fi
+
+# Room for the backup: the data volume compressed is smaller than this, so it is a safe bound.
+need_kb="$(docker run --rm --entrypoint sh -v "$volume:/data:ro" "$repo:$current" -c 'du -sk /data | cut -f1' 2>> "$LOG")"
+free_kb="$(df -Pk "$BACKUPS" | awk 'NR==2 {print $4}')"
+if [[ -n "$need_kb" && -n "$free_kb" && "$free_kb" -lt $((need_kb + 1048576)) ]]; then
+  write_status "failed" "Not enough disk space for a safety backup (need about $(( (need_kb + 1048576) / 1024 )) MB free in $BACKUPS). Nothing was changed."
+  exit 0
+fi
+
+snapshot="$BACKUPS/$STAMP-$current-to-$target"
+mkdir -p "$snapshot" && chmod 0700 "$snapshot"
+cp -a docker-compose.yml "$snapshot/docker-compose.yml.previous"
+
+write_status "running" "Backing up before switching to $target. Rimberio is briefly offline."
+log "Stopping $SERVICE and backing up to $snapshot."
+dc stop "$SERVICE" >> "$LOG" 2>&1
+backup_ok=1
+dc exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$snapshot/database.dump" 2>> "$LOG" || backup_ok=0
+docker run --rm --entrypoint sh -v "$volume:/data:ro" -v "$snapshot:/backup" "$repo:$current" \
+  -c 'tar czf /backup/data.tgz -C /data .' >> "$LOG" 2>&1 || backup_ok=0
+if [[ "$backup_ok" != 1 || ! -s "$snapshot/database.dump" || ! -s "$snapshot/data.tgz" ]]; then
+  log "Backup failed; restarting the current version."
+  dc up -d "$SERVICE" >> "$LOG" 2>&1
+  write_status "failed" "The safety backup failed, so nothing was changed. Rimberio is starting again on $current."
+  exit 0
+fi
+
+wait_healthy() {
+  local want="$1" waited=0 cid health image
+  while (( waited < HEALTH_TIMEOUT )); do
+    cid="$(dc ps -q "$SERVICE" 2>/dev/null | head -1)"
+    if [[ -n "$cid" ]]; then
+      health="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$cid" 2>/dev/null)"
+      image="$(docker inspect -f '{{.Config.Image}}' "$cid" 2>/dev/null)"
+      if [[ "$health" == "healthy" && "$image" == "$repo:$want" ]]; then return 0; fi
+    fi
+    sleep 5
+    waited=$((waited + 5))
+  done
+  return 1
+}
+
+set_pin() {
+  local from="$1" to="$2"
+  # Exact, fixed-string replacements of the image pin and the version the app reports.
+  local tmp
+  tmp="$(mktemp "$BASE/.docker-compose.yml.XXXXXX")"
+  awk -v pin_from="$repo:$from" -v pin_to="$repo:$to" -v from="$from" -v to="$to" '
+    { line = $0
+      i = index(line, pin_from); if (i) line = substr(line, 1, i - 1) pin_to substr(line, i + length(pin_from))
+      if (line ~ /^[[:space:]]*APP_VERSION:[[:space:]]*/) { j = index(line, from); if (j) line = substr(line, 1, j - 1) to substr(line, j + length(from)) }
+      print line }' docker-compose.yml > "$tmp" || { rm -f "$tmp"; return 1; }
+  # Only swap in a rewrite that really carries the new pin.
+  grep -qF "$repo:$to" "$tmp" || { rm -f "$tmp"; return 1; }
+  chmod --reference=docker-compose.yml "$tmp" 2>/dev/null || chmod 0600 "$tmp"
+  mv -f "$tmp" docker-compose.yml
+}
+
+write_status "running" "Starting $target. The console comes back on its own in a minute or two."
+if ! set_pin "$current" "$target"; then
+  log "Could not rewrite the pin in docker-compose.yml; restarting $current."
+  dc up -d "$SERVICE" >> "$LOG" 2>&1
+  write_status "failed" "Could not update docker-compose.yml, so nothing was changed. Rimberio is starting again on $current."
+  exit 0
+fi
+log "Pin switched to $repo:$target; recreating $SERVICE."
+if dc up -d --force-recreate "$SERVICE" >> "$LOG" 2>&1 && wait_healthy "$target"; then
+  log "Healthy on $target."
+  write_status "succeeded" "Now running $target."
+  # Keep the newest few backups; each one holds every linked number's login.
+  ls -1dt "$BACKUPS"/*-to-* 2>/dev/null | tail -n +$((KEEP_BACKUPS + 1)) | while read -r old; do rm -rf -- "$old"; done
+  exit 0
+fi
+
+log "$target did not become healthy within ${HEALTH_TIMEOUT}s; rolling back."
+write_status "running" "$target did not start properly. Restoring $current from the backup."
+dc stop "$SERVICE" >> "$LOG" 2>&1
+cp -f "$snapshot/docker-compose.yml.previous" docker-compose.yml
+rollback_ok=1
+docker run --rm --entrypoint sh -v "$volume:/data" -v "$snapshot:/backup:ro" "$repo:$current" \
+  -c 'find /data -mindepth 1 -delete && tar xzf /backup/data.tgz -C /data' >> "$LOG" 2>&1 || rollback_ok=0
+dc exec -T db sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --single-transaction' < "$snapshot/database.dump" >> "$LOG" 2>&1 || rollback_ok=0
+if dc up -d --force-recreate "$SERVICE" >> "$LOG" 2>&1 && wait_healthy "$current" && [[ "$rollback_ok" == 1 ]]; then
+  log "Rolled back to $current."
+  write_status "failed" "$target did not start, so Rimberio was rolled back to $current with the data from just before the update. See $LOG."
+else
+  log "Rollback did not complete cleanly."
+  write_status "failed" "$target did not start, and the rollback to $current did not complete cleanly. Manual attention needed. Backup: $snapshot. Log: $LOG."
+fi
+exit 0

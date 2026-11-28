@@ -4,7 +4,7 @@ Self-hosted WhatsApp API, operator inbox and n8n integration. This public reposi
 
 ## Deploy
 
-Use a Linux VPS with at least 2 GB RAM (4 GB recommended), persistent storage, Docker and Compose. The image is `thebuildguild/rimberio:0.3.1` (also tagged `latest`), with Linux AMD64 and ARM64 support. Docker selects the matching architecture automatically.
+Use a Linux VPS with at least 2 GB RAM (4 GB recommended), persistent storage, Docker and Compose. The image is `thebuildguild/rimberio:0.3.2` (also tagged `latest`), with Linux AMD64 and ARM64 support. Docker selects the matching architecture automatically.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/the-build-guild/rimberio/main/install.sh -o install-rimberio.sh
@@ -28,13 +28,17 @@ For manual installation, copy `docker-compose.yml` and `.env.example`, generate 
 
 ## n8n
 
-In self-hosted n8n, open Settings ? Community nodes and install `@thebuildguild/n8n-nodes-rimberio`. Use a scoped API key; the trigger requires admin scope to register its webhook. [Plugin source and documentation](plugins/n8n-nodes-rimberio/README.md).
+In self-hosted n8n, open Settings ▸ Community nodes and install `@thebuildguild/n8n-nodes-rimberio`. Use a scoped API key; the trigger requires admin scope to register its webhook. [Plugin source and documentation](plugins/n8n-nodes-rimberio/README.md).
 
 The 0.1.12 plugin supports chat pagination, cursor-based history and browser-compatible video download on Rimberio 0.3.0. It does not fetch every conversation's history during initial loading.
 
 ## Upgrades and backups
 
-Compose pins the application version. Back up Postgres and session data before changing that tag, then run `docker compose pull && docker compose up -d --wait`. Do not delete named volumes during an upgrade. See the [deployment guide](deploy/README.md#backup-upgrade-and-recovery).
+Rimberio checks the public release list once a day and shows a notice in the console when a newer version exists. Nothing about your installation is sent; set `DISABLE_UPDATE_CHECK=true` to turn the check off.
+
+On a server set up with `install.sh`, an owner or admin can install the update from **Settings ▸ Updates**. The server backs up the database and every linked number's login, switches to the new version and restarts (a minute or two offline). If the new version does not start, it restores the backup and the previous version automatically. Installs from before one-click updates gain them by running `install.sh` again.
+
+To update by hand: compose pins the application version. Back up Postgres and session data before changing that tag, then run `docker compose pull && docker compose up -d --wait`. Do not delete named volumes during an upgrade. See the [deployment guide](deploy/README.md#backup-upgrade-and-recovery).
 
 ## Account safety and licensing
 

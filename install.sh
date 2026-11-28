@@ -25,9 +25,49 @@ fi
 docker compose version >/dev/null || { echo 'Install the Docker Compose plugin first.' >&2; exit 1; }
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
+if [[ -f docker-compose.yml ]] && ! grep -q '/updates/request.json' docker-compose.yml; then
+  # An install from before one-click updates: take the current compose file (which also moves
+  # this install to the current release). The old file is kept next to it.
+  cp -p docker-compose.yml "docker-compose.yml.before-updater-$(date -u +%Y%m%d%H%M%S)"
+  rm -f docker-compose.yml
+  echo 'Refreshing docker-compose.yml to enable one-click updates (previous copy kept).'
+fi
 if [[ ! -f docker-compose.yml ]]; then
   curl -fsSL --retry 3 "$RAW_BASE/docker-compose.yml" -o docker-compose.yml.download
   mv docker-compose.yml.download docker-compose.yml
+fi
+
+# One-click updates. Rimberio (uid 1000 in its container) writes update requests into
+# ./updates; rimberio-updater runs on this host as root, outside any container, when a request
+# appears (systemd path unit) and writes the outcome back. See the comments in the script.
+# updates/ belongs to the container's user, so this script (root) only renames finished files
+# into it and never writes through a path inside it.
+mkdir -p updates
+chown 1000:1000 updates
+chmod 0755 updates
+updater_ready=false
+if command -v systemctl >/dev/null && [[ -d /run/systemd/system ]]; then
+  download_dir="$(mktemp -d)"
+  for file in rimberio-updater rimberio-updater.path rimberio-updater.service; do
+    curl -fsSL --retry 3 "$RAW_BASE/updater/$file" -o "$download_dir/$file"
+  done
+  install -m 0755 "$download_dir/rimberio-updater" /usr/local/bin/rimberio-updater
+  for unit in rimberio-updater.path rimberio-updater.service; do
+    sed "s#@INSTALL_DIR@#$INSTALL_DIR#g" "$download_dir/$unit" > "/etc/systemd/system/$unit"
+    chmod 0644 "/etc/systemd/system/$unit"
+  done
+  rm -rf -- "$download_dir"
+  systemctl daemon-reload
+  systemctl enable --now rimberio-updater.path >/dev/null
+  # Tells the app the host side is in place, so the console offers the Install button.
+  agent_file="$(mktemp "$INSTALL_DIR/.agent.XXXXXX")"
+  printf '{"updater":"rimberio-updater","installedAt":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$agent_file"
+  chmod 0644 "$agent_file"
+  mv -fT "$agent_file" updates/agent.json
+  updater_ready=true
+else
+  rm -f updates/agent.json
+  echo 'systemd not found: one-click updates are off. Update by hand as described in the README.'
 fi
 if [[ ! -f .env ]]; then
   cat > .env <<EOF
@@ -81,6 +121,7 @@ docker compose config --quiet
 docker compose pull
 docker compose up -d --wait --wait-timeout 300
 echo "Rimberio is healthy. Configuration: $INSTALL_DIR/.env (root-only)."
+if [[ "$updater_ready" == true ]]; then echo 'One-click updates are enabled (Settings > Updates).'; fi
 echo 'No token is printed to the console or cloud-init logs.'
 if [[ -n "$DOMAIN" ]]; then
   echo "Open https://$DOMAIN and create the owner account immediately."

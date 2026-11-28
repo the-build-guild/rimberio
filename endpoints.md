@@ -1,6 +1,6 @@
 # API reference
 
-Rimberio 0.3.1: 141 operations. [OpenAPI JSON](openapi.json). Your instance provides the interactive reference at /api-docs when enabled.
+Rimberio 0.3.2: 144 operations. [OpenAPI JSON](openapi.json). Your instance provides the interactive reference at /api-docs when enabled.
 
 Authenticate using either `Authorization: Bearer TOKEN` or `X-Bridge-Token: TOKEN`. Prefer scoped API keys. Public health and account-auth routes have their own policies. WhatsApp routes may require license activation.
 
@@ -204,6 +204,14 @@ Send responses: 201 means sent; 202 means queued. Observe `message_sent` or insp
 | GET | `/v1/whatsapp/sessions/{id}/rate-limit/queue` | Queue status: pending sends, recent history, and backoff state |
 | DELETE | `/v1/whatsapp/sessions/{id}/rate-limit/queue/{queueId}` | Cancel a pending queued send |
 | POST | `/v1/whatsapp/sessions/{id}/rate-limit/queue/{queueId}/retry` | Retry a failed queued send |
+
+## Updates
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/v1/updates` | Whether a newer Rimberio release is available, and the state of an update in progress |
+| POST | `/v1/updates/check` | Check for a newer release now |
+| POST | `/v1/updates/install` | Install the newest release (one-click update) |
 
 ## Webhooks
 

@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.3.2
+
+- Fix linking new numbers (and re-linking logged-out ones): WhatsApp now serves a separate
+  login page that previously failed with "Cannot read properties of null (reading 'Socket')".
+  The QR code and pairing code are shown from that page again.
+- Fix photo, video and document sends that WhatsApp rejected while the API and console reported
+  them as sent. Real send failures are now returned as errors.
+- Console: send several attachments at once. Paste more images into an open preview, pick
+  multiple files, give each file its own caption, and remove files before sending.
+- Console: paste videos and documents copied in the file manager (previously only images), and
+  drag files onto a chat or into the open preview to send them.
+- Console: the message box returns to one line after sending, and the chat scrolls to the
+  message just sent.
+- Update notices: the console shows when a newer release is available, with its release notes
+  (daily check of the public release list; nothing about the install is sent;
+  `DISABLE_UPDATE_CHECK=true` turns it off). New `GET /v1/updates` and `POST /v1/updates/check`.
+- One-click updates on servers set up with `install.sh`: Settings ▸ Updates installs the newest
+  release, backing up the database and linked-number logins first and rolling back automatically
+  if the new version does not start (`POST /v1/updates/install`). Existing installs enable it by
+  running `install.sh` again.
+
 ## 0.3.1
 
 - Move public guides, installer and plugin source to the-build-guild/rimberio.

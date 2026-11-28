@@ -769,6 +769,232 @@
         ]
       }
     },
+    "/v1/updates": {
+      "get": {
+        "description": "Answers from the last check of the public Docker Hub tag list (checked daily). Sends nothing about this install. `source` is null when checking is switched off with DISABLE_UPDATE_CHECK=true. `canInstall` is true when the host has the one-click updater installed (see install.sh); `install` reports the last update requested from here.",
+        "operationId": "UpdatesController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "{ currentVersion, latestVersion, updateAvailable, checkedAt, source, error, releaseNotes, releaseNotesUrl, canInstall, installUnavailableReason, install }"
+          },
+          "401": {
+            "description": "Missing or invalid token or browser session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 401
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Missing or invalid token or browser session."
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Unauthorized"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your API key or account does not have the required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 403
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Your API key or account does not have the required scope."
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "x-bridge-token": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Whether a newer Rimberio release is available, and the state of an update in progress",
+        "tags": [
+          "Updates"
+        ]
+      }
+    },
+    "/v1/updates/check": {
+      "post": {
+        "description": "Repeated requests within 30 seconds return the previous answer.",
+        "operationId": "UpdatesController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The refreshed status"
+          },
+          "401": {
+            "description": "Missing or invalid token or browser session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 401
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Missing or invalid token or browser session."
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Unauthorized"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your API key or account does not have the required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 403
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Your API key or account does not have the required scope."
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "x-bridge-token": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Check for a newer release now",
+        "tags": [
+          "Updates"
+        ]
+      }
+    },
+    "/v1/updates/install": {
+      "post": {
+        "description": "Asks the host's updater to back up, switch to the newest published release and restart. Rimberio is offline for a minute or two; if the new version does not become healthy, the host restores the backup and the previous version. Only the newest release from the last check is accepted. 503 when the host has no updater installed, 409 while an update is already running.",
+        "operationId": "UpdatesController_install",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallUpdateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The update was requested; poll GET /v1/updates for progress"
+          },
+          "401": {
+            "description": "Missing or invalid token or browser session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 401
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Missing or invalid token or browser session."
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Unauthorized"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Your API key or account does not have the required scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "statusCode": {
+                      "type": "integer",
+                      "example": 403
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Your API key or account does not have the required scope."
+                    },
+                    "error": {
+                      "type": "string",
+                      "example": "Forbidden"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "x-bridge-token": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Install the newest release (one-click update)",
+        "tags": [
+          "Updates"
+        ]
+      }
+    },
     "/v1/whatsapp/sessions": {
       "get": {
         "description": "Lists every WhatsApp session known to this instance and its current status.",
@@ -13387,7 +13613,7 @@
   "info": {
     "title": "Rimberio API",
     "description": "",
-    "version": "0.3.1",
+    "version": "0.3.2",
     "contact": {}
   },
   "tags": [],
@@ -13446,6 +13672,19 @@
         "required": [
           "name",
           "scope"
+        ]
+      },
+      "InstallUpdateDto": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "The release to install. Must be the newest published release.",
+            "example": "0.3.2"
+          }
+        },
+        "required": [
+          "version"
         ]
       },
       "StartSessionDto": {

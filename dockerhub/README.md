@@ -36,6 +36,7 @@ For manual Compose deployment, provider instructions, cloud-init and Terraform:
 - Multiple WhatsApp numbers, scoped API keys, audit logs and session backup tools.
 - n8n community package: [`@thebuildguild/n8n-nodes-rimberio`](https://www.npmjs.com/package/@thebuildguild/n8n-nodes-rimberio).
 - Optional Swagger reference at `/api-docs`, controlled from the console.
+- Update notices in the console, and one-click updates with automatic backup and rollback on servers set up with the installer.
 
 [API documentation](https://github.com/the-build-guild/rimberio/blob/main/endpoints.md) · [n8n examples](https://github.com/the-build-guild/rimberio/blob/main/examples/n8n.md)
 
@@ -47,7 +48,7 @@ The application listens on port **3000** inside the container. Mount persistent 
 
 ## Versions and upgrades
 
-Use the exact release tag `{{VERSION}}` for predictable deployments. `latest` tracks the current release. Back up PostgreSQL and session data before upgrading, update the image version in Compose, then run:
+Use the exact release tag `{{VERSION}}` for predictable deployments. `latest` tracks the current release. The console shows when a newer release exists (set `DISABLE_UPDATE_CHECK=true` to turn the daily check off). Servers set up with the installer can install it from Settings ▸ Updates, with an automatic backup and rollback. To update by hand, back up PostgreSQL and session data, update the image version in Compose, then run:
 
 ```sh
 docker compose pull

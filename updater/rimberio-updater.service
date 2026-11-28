@@ -1,0 +1,13 @@
+[Unit]
+Description=Apply an update the Rimberio console asked for
+# Docker has to be up: the update pulls an image and recreates the container.
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+Environment=RIMBERIO_INSTALL_DIR=@INSTALL_DIR@
+ExecStart=/usr/local/bin/rimberio-updater
+# The update recreates the container that asked for it and may restore a backup; nothing
+# here should be killed for taking a few minutes.
+TimeoutStartSec=3600

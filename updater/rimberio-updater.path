@@ -1,0 +1,11 @@
+[Unit]
+Description=Watch for an update the Rimberio console asked for
+
+[Path]
+# Fires the moment Rimberio writes the request, and once at boot if one is already there
+# (a reboot that interrupted an update). install.sh fills in the install folder.
+PathExists=@INSTALL_DIR@/updates/request.json
+Unit=rimberio-updater.service
+
+[Install]
+WantedBy=multi-user.target
